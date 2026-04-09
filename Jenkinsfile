@@ -7,24 +7,47 @@ pipeline {
 
     stages {
 
-        stage('Run Terraform') {
+        stage('Clone') {
             steps {
                 git branch: 'main', url: 'https://github.com/PRATHAMKUKUDKAR/Terraform-GitHubAction.git'
+            }
+        }
 
+        stage('Terraform Init') {
+            steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-cred'
                 ]]) {
-                    sh '''
-                    terraform init
-                    terraform plan
+                    sh 'terraform init'
+                }
+            }
+        }
 
-                    if [ "$ACTION" = "apply" ]; then
-                        terraform apply -auto-approve
-                    else
-                        terraform destroy -auto-approve
-                    fi
-                    '''
+        stage('Terraform Plan') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-cred'
+                ]]) {
+                    sh 'terraform plan'
+                }
+            }
+        }
+
+        stage('Apply or Destroy') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-cred'
+                ]]) {
+                    script {
+                        if (params.ACTION == 'apply') {
+                            sh 'terraform apply -auto-approve'
+                        } else {
+                            sh 'terraform destroy -auto-approve'
+                        }
+                    }
                 }
             }
         }
